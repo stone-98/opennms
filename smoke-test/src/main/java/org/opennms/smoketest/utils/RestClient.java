@@ -48,6 +48,7 @@ import javax.ws.rs.core.Response;
 
 import org.glassfish.jersey.client.ClientProperties;
 import org.opennms.core.xml.JaxbUtils;
+import org.opennms.features.deviceconfig.rest.BackupRequestDTO;
 import org.opennms.netmgt.measurements.model.QueryRequest;
 import org.opennms.netmgt.measurements.model.QueryResponse;
 import org.opennms.netmgt.model.OnmsAlarmCollection;
@@ -390,5 +391,15 @@ public class RestClient {
         };
         final WebTarget target = getTargetV2().path("applications");
         return getBuilder(target).accept(MediaType.APPLICATION_XML).get(applications);
+    }
+
+    public void triggerBackup(final String requestDTO) {
+        final WebTarget target = getTargetV2().path("device-config").path("backup");
+        getBuilder(target).post(Entity.entity(requestDTO, MediaType.APPLICATION_JSON));
+    }
+
+    public String getBackups() {
+        final WebTarget target = getTargetV2().path("device-config");
+        return getBuilder(target).get(String.class);
     }
 }

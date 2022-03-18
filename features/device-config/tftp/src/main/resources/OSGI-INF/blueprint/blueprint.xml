@@ -6,7 +6,7 @@
 
     <cm:property-placeholder persistent-id="org.opennms.features.deviceconfig.tftp">
         <cm:default-properties>
-            <cm:property name="port" value="69"/>
+            <cm:property name="port" value="6969"/>
             <cm:property name="address" value="0.0.0.0"/>
             <cm:property name="maximumReceiveSize" value="50000"/>
         </cm:default-properties>
