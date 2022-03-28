@@ -1115,7 +1115,11 @@ public class Collectd extends AbstractServiceDaemon implements
         // Schedule the interface
         scheduleForCollection(event);
     }
-    
+
+    /**
+     * 处理重新加载配置
+     * @param event
+     */
     private void handleReloadDaemonConfig(IEvent event) {
         final String collectionDaemonName = "Collectd";
         boolean isCollection = false;

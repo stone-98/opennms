@@ -222,6 +222,7 @@ public abstract class AbstractSnmpCollector extends AbstractServiceCollector {
     /** {@inheritDoc} */
     @Override
     public RrdRepository getRrdRepository(String collectionName) {
+        // 暂时还没看RrdRepository的作用，暂时理解为获取配置文件
         return DataCollectionConfigFactory.getInstance().getRrdRepository(collectionName);
     }
 }

@@ -58,6 +58,7 @@ public class DefaultSnmpCollectionAgentService extends DefaultCollectionAgentSer
     private static final Logger LOG = LoggerFactory.getLogger(DefaultCollectionAgentService.class);
     
     /**
+     * 创建一个SnmpCollectionAgentServer的代理
      * <p>create</p>
      *
      * @param ifaceId a {@link java.lang.Integer} object.

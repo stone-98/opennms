@@ -78,11 +78,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 /**
  * <P>
  * The CollectableService class ...
+ * 收集信息服务,实现{@link ReadyRunnable}
  * </P>
- * 
+ *
  * @author <A HREF="mailto:mike@opennms.org">Mike Davidson </A>
  * @author <A HREF="http://www.opennms.org/">OpenNMS </A>
- * 
+ *
  */
 class CollectableService implements ReadyRunnable {
 
@@ -92,54 +93,90 @@ class CollectableService implements ReadyRunnable {
 
     protected static final String USE_COLLECTION_START_TIME_SYS_PROP = "org.opennms.netmgt.collectd.useCollectionStartTime";
 
+    /**
+     * 是否是严格的时间间隔
+     */
     private final boolean m_usingStrictInterval = Boolean.getBoolean(STRICT_INTERVAL_SYS_PROP);
 
     /**
+     * 接口属于哪个Node的唯一标识
      * Interface's parent node identifier
      */
     private volatile int m_nodeId;
 
     /**
+     * 最后的状态
      * Last known/current status
      */
     private volatile CollectionStatus m_status;
 
     /**
+     * 最后一次收集的时间
      * The last time the collector was scheduled for collection.
      */
     private volatile long m_lastScheduledCollectionTime;
 
     /**
+     * 关于这个收集的调度任务
      * The scheduler for collectd
      */
     private final Scheduler m_scheduler;
 
     /**
+     * 对更新进行一个记录，当SnmpCollector正在执行调度时，将更新记录存储在此类中
      * Service updates
      */
     private final CollectorUpdates m_updates;
 
     private static final boolean ABORT_COLLECTION = true;
 
+    /**
+     * 收集的规则
+     */
 	private final CollectionSpecification m_spec;
 
+    /**
+     * 任务完成标识
+     */
 	private final SchedulingCompletedFlag m_schedulingCompletedFlag;
 
+    /**
+     * 收集的agent
+     */
 	private volatile CollectionAgent m_agent;
 
+	/**
+     * 事务管理器，我们应该用不到
+	 */
 	private final PlatformTransactionManager m_transMgr;
 
+    /**
+     * ip接口数据操作层
+     */
     private final IpInterfaceDao m_ifaceDao;
 
+    /**
+     * snmp请求的相关参数
+     */
     private final ServiceParameters m_params;
-    
+
+    /**
+     * 暂时不清楚是什么，现在的理解就是配置相关的，比如配置了要获取那些oid
+     */
     private final RrdRepository m_repository;
 
+    /**
+     * 用于实例化适当的CollectionSetVisitor ，其作用是将属性保留在CollectionSet中。
+     */
     private final PersisterFactory m_persisterFactory;
 
+    /**
+     * 用来计算CollectionSet的阈值的
+     */
     private ThresholdingSession m_thresholdingSession;
 
     /**
+     * 构造一个CollectableService对象
      * Constructs a new instance of a CollectableService object.
      *
      * @param iface The interface on which to collect data
@@ -153,7 +190,7 @@ class CollectableService implements ReadyRunnable {
     protected CollectableService(OnmsIpInterface iface, IpInterfaceDao ifaceDao, CollectionSpecification spec,
             Scheduler scheduler, SchedulingCompletedFlag schedulingCompletedFlag, PlatformTransactionManager transMgr,
             PersisterFactory persisterFactory, ThresholdingService thresholdingService) throws CollectionInitializationException {
-
+        // 初始化相关值...
         m_agent = DefaultSnmpCollectionAgent.create(iface.getId(), ifaceDao, transMgr);
         m_spec = spec;
         m_scheduler = scheduler;
@@ -172,6 +209,8 @@ class CollectableService implements ReadyRunnable {
         m_spec.initialize(m_agent);
 
         m_params = m_spec.getServiceParameters();
+
+        // 相当于获取配置文件
         m_repository=m_spec.getRrdRepository(m_params.getCollectionName());
 
         try {
@@ -180,7 +219,7 @@ class CollectableService implements ReadyRunnable {
             LOG.error("Error when initializing Thresholding. No Thresholding will be performed on this service.", e);
         }
     }
-    
+
     /**
      * <p>getAddress</p>
      *
@@ -189,8 +228,9 @@ class CollectableService implements ReadyRunnable {
     public InetAddress getAddress() {
     	return m_agent.getAddress();
     }
-    
+
     /**
+     * 返回收集的规则
      * <p>getSpecification</p>
      *
      * @return a {@link org.opennms.netmgt.collection.core.CollectionSpecification} object.
@@ -200,6 +240,7 @@ class CollectableService implements ReadyRunnable {
     }
 
     /**
+     * 返回Node唯一标识
      * Returns node identifier
      *
      * @return a int.
@@ -240,7 +281,7 @@ class CollectableService implements ReadyRunnable {
      * Should be called when the collect config has been reloaded.
      *
      * @param collectorConfigDao a {@link org.opennms.netmgt.config.CollectdConfigFactory} object.
-     * @throws CollectionInitializationException 
+     * @throws CollectionInitializationException
      */
     public void refreshPackage(CollectdConfigFactory collectorConfigDao) throws CollectionInitializationException {
         m_spec.refresh(collectorConfigDao);
@@ -282,7 +323,7 @@ class CollectableService implements ReadyRunnable {
 
     /**
      * Generate event and send it to eventd via the event proxy.
-     * 
+     *
      * uei Universal event identifier of event to generate.
      */
     private void sendEvent(String uei, String reason) {
@@ -291,7 +332,7 @@ class CollectableService implements ReadyRunnable {
         builder.setInterface(m_agent.getAddress());
         builder.setService(m_spec.getServiceName());
         builder.setHost(InetAddressUtils.getLocalHostName());
-        
+
         if (reason != null) {
             builder.addParam("reason", reason);
         }
@@ -331,6 +372,7 @@ class CollectableService implements ReadyRunnable {
     }
 
     private void doRun() {
+        // 如果
         // Process any outstanding updates.
         if (processUpdates() == ABORT_COLLECTION) {
             LOG.debug("run: Aborting because processUpdates returned ABORT_COLLECTION (probably marked for deletion) for {}", this);
@@ -341,8 +383,10 @@ class CollectableService implements ReadyRunnable {
         // it is the current time; if we are, it is the previous time plus the
         // interval
         if (m_lastScheduledCollectionTime == 0 || !m_usingStrictInterval) {
+            // 如果没进行严格的时间间隔，则直接是当前时间
             m_lastScheduledCollectionTime = System.currentTimeMillis();
         } else {
+            // 如果进行了严格的间隔，则最后的执行收集的时间=上一次执行收集的时间+时间间隔
             m_lastScheduledCollectionTime += m_spec.getInterval();
         }
 
@@ -350,6 +394,7 @@ class CollectableService implements ReadyRunnable {
          * Check scheduled outages to see if any apply indicating
          * that the collection should be skipped.
          */
+        // 是否需要跳过收集
         if (!m_spec.scheduledOutage(m_agent)) {
             try {
                 doCollection();
@@ -388,7 +433,7 @@ class CollectableService implements ReadyRunnable {
         if (!status.equals(m_status)) {
             // Generate data collection transition events
             LOG.debug("run: change in collection status, generating event.");
-            
+
             String reason = null;
             if (e != null) {
                 reason = e.getMessage();
@@ -462,7 +507,7 @@ class CollectableService implements ReadyRunnable {
 
 	/**
      * Process any outstanding updates.
-     * 
+     *
      * @return true if update indicates that collection should be aborted (for
      *         example due to deletion flag being set), false otherwise.
      */
@@ -471,11 +516,13 @@ class CollectableService implements ReadyRunnable {
         // to ensure that no updates are missed.
         //
         synchronized (this) {
+            // 如果没有需要更新的话，返回false
             if (!m_updates.hasUpdates())
                 return !ABORT_COLLECTION;
 
             // Update: deletion flag
             //
+            // 如果是删除标识，则要进行跳过收集，将不会调度
             if (m_updates.isDeletionFlagSet()) {
                 // Deletion flag is set, simply return without polling
                 // or rescheduling this collector.
@@ -485,6 +532,7 @@ class CollectableService implements ReadyRunnable {
                 return ABORT_COLLECTION;
             }
 
+            // 重新初始化
             OnmsIpInterface newIface = m_updates.isReinitializationNeeded();
 			// Update: reinitialization flag
             //

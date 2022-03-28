@@ -54,26 +54,28 @@ import org.springframework.core.io.FileSystemResource;
 
 /**
  * The Class RRD/JRB Migrator for SNMP Interfaces Data (Online Version)
- * 
+ *
  * <p>1.12 always add the MAC Address to the snmpinterface table if exist, which
  * is different from the 1.10 behavior. For this reason, some interfaces are going
  * to appear twice, and the data must be merged.</p>
- * 
+ *
  * <p>This tool requires that OpenNMS 1.12 is running for a while to be sure that
  * all the MAC addresses have been updated, and the directories already exist.</p>
- * 
+ *
  * <p>Issues fixed:</p>
  * <ul>
  * <li>NMS-6056</li>
  * </ul>
- * 
- * @author <a href="mailto:agalue@opennms.org">Alejandro Galue</a> 
+ *
+ * @author <a href="mailto:agalue@opennms.org">Alejandro Galue</a>
  */
 public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
 
     private static final Logger LOG = LoggerFactory.getLogger(SnmpInterfaceRrdMigratorOnline.class);
 
-    /** The interfaces to merge. */
+    /**
+     * The interfaces to merge.
+     */
     private List<SnmpInterfaceUpgrade> interfacesToMerge;
 
     /**
@@ -115,6 +117,7 @@ public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
             throw new OnmsUpgradeException("Can't find the configured extension for JRB/RRD.");
         }
         try {
+            // 手动初始化DataCollectionConfigDao，避免Spring重复创建
             // Manually initialization of the DataCollectionConfigDao to avoid bootstrap Spring Framework and create a new connection pool.
             File cfgFile = ConfigFileConstants.getFile(ConfigFileConstants.DATA_COLLECTION_CONF_FILE_NAME);
             DefaultDataCollectionConfigDao config = new DefaultDataCollectionConfigDao();
@@ -170,7 +173,7 @@ public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
      * @throws OnmsUpgradeException the OpenNMS upgrade exception
      */
     private void createBackup(SnmpInterfaceUpgrade intf) throws OnmsUpgradeException {
-        File[] targets = { intf.getOldInterfaceDir(), intf.getNewInterfaceDir() };
+        File[] targets = {intf.getOldInterfaceDir(), intf.getNewInterfaceDir()};
         for (File target : targets) {
             if (target.exists()) {
                 log("Backing up: %s\n", target);
@@ -186,7 +189,7 @@ public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
      * @throws OnmsUpgradeException the OpenNMS upgrade exception
      */
     private void restoreBackup(SnmpInterfaceUpgrade intf) throws OnmsUpgradeException {
-        File[] targets = { intf.getOldInterfaceDir(), intf.getNewInterfaceDir() };
+        File[] targets = {intf.getOldInterfaceDir(), intf.getNewInterfaceDir()};
         for (File target : targets) {
             File zip = new File(target.getAbsolutePath() + ZIP_EXT);
             try {
@@ -213,7 +216,7 @@ public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
      * @throws OnmsUpgradeException the OpenNMS upgrade exception
      */
     private void removeBackup(SnmpInterfaceUpgrade intf) {
-        File[] targets = { intf.getOldInterfaceDir(), intf.getNewInterfaceDir() };
+        File[] targets = {intf.getOldInterfaceDir(), intf.getNewInterfaceDir()};
         for (File target : targets) {
             File zip = new File(target.getAbsolutePath() + ZIP_EXT);
             if (zip.exists()) {
@@ -313,7 +316,7 @@ public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
      * Merge RRDs.
      *
      * @param source the source RRD
-     * @param dest the destination RRD
+     * @param dest   the destination RRD
      * @throws Exception the exception
      */
     protected void mergeRrd(File source, File dest) throws Exception {
@@ -337,7 +340,7 @@ public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
      * Merge JRBs.
      *
      * @param source the source JRB
-     * @param dest the destination JRB
+     * @param dest   the destination JRB
      * @throws Exception the exception
      */
     protected void mergeJrb(File source, File dest) throws Exception {
@@ -360,9 +363,9 @@ public class SnmpInterfaceRrdMigratorOnline extends AbstractOnmsUpgrade {
     /**
      * Gets the node directory.
      *
-     * @param nodeId the node id
+     * @param nodeId        the node id
      * @param foreignSource the foreign source
-     * @param foreignId the foreign id
+     * @param foreignId     the foreign id
      * @return the node directory
      */
     protected File getNodeDirectory(int nodeId, String foreignSource, String foreignId) {
